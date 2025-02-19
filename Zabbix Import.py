@@ -3,6 +3,8 @@ import urllib3
 import pandas as pd
 from datetime import timedelta
 
+fuso_brasilia = pytz.timezone('America/Sao_Paulo')
+
 # Dicionário Das Lat e Lon
 coordenadas = {
     #Coordenadas inseridas manualmente caso seu Geopy ou integração com geolocalizadores de algum problema.
@@ -138,11 +140,38 @@ if slaId_response.status_code == 200:
                     else:
                         critico = "Critico"
 
-                    period_from = pd.to_datetime(period_from, unit='s')
-                    period_to = pd.to_datetime(period_to, unit='s')
+                    period_from = pd.to_datetime(period_from, unit='s', utc=True)
+                    period_to = pd.to_datetime(period_to, unit='s',utc=True)
+                    period_from = period_from.tz_convert(fuso_brasilia)
+                    period_to = period_to.tz_convert(fuso_brasilia)
+                    period_from = period_from.tz_localize(None)
+                    period_to = period_to.tz_localize(None)
                     uptime = str(timedelta(seconds=uptime))
+                    if "day" in uptime:
+                        days, time = uptime.split(", ")  # Separa "1 day" e "00:00:00"
+                        total_days = int(days.split()[0])  # Obtém o número de dias
+                        hours, minutes, seconds = map(int, time.split(":"))  # Quebra o tempo restante
+                        uptime = f"{total_days}.{hours:02}:{minutes:02}:{seconds:02}"  # Formato d.hh:mm:ss
+                    else:
+                        uptime = uptime  # Mantém no formato hh:mm:ss se não houver dias
+
+                    # Converter downtime para usar o formato Duration formato do Power BI
                     downtime = str(timedelta(seconds=downtime))
+                    if "day" in downtime:
+                        days, time = downtime.split(", ")  # Separa "1 day" e "00:00:00"
+                        total_days = int(days.split()[0])  # Obtém o número de dias
+                        hours, minutes, seconds = map(int, time.split(":"))  # Quebra o tempo restante
+                        downtime = f"{total_days}.{hours:02}:{minutes:02}:{seconds:02}"  # Formato d.hh:mm:ss
+                    else:
+                        downtime = downtime  # Mantém no formato hh:mm:ss se não houver dias
                     error_budget = str(timedelta(seconds=error_budget))
+                    if "day" in error_budget:
+                        days, time = error_budget.split(", ")  # Separa "1 day" e "00:00:00"
+                        total_days = int(days.split()[0])  # Obtém o número de dias
+                        hours, minutes, seconds = map(int, time.split(":"))  # Quebra o tempo restante
+                        error_budget = f"{total_days}.{hours:02}:{minutes:02}:{seconds:02}"  # Formato d.hh:mm:ss
+                    else:
+                        error_budget = error_budget  # Mantém no formato hh:mm:ss se não houver dias
                     servico_id_nome = servicos_id_nome.get(str(service_id))
                     servico_lat_lon = coordenadas.get(service_id)
 
